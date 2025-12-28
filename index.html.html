@@ -1,0 +1,132 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Xúc Xắc 3D Siêu Chuẩn</title>
+    <style>
+        body { background: #1a1a2e; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: #16213e; padding: 30px; border-radius: 20px; text-align: center; width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        /* 3D Dice */
+        .scene { width: 100px; height: 100px; perspective: 1000px; margin: 40px auto; }
+        .dice { 
+            width: 100%; height: 100%; position: relative; transform-style: preserve-3d; 
+            transition: transform 1.5s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+        }
+        .face { 
+            position: absolute; width: 100px; height: 100px; background: white; 
+            border: 2px solid #333; line-height: 100px; font-size: 40px; 
+            font-weight: bold; color: #333; border-radius: 12px; box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+        }
+        /* Định nghĩa mặt số chuẩn */
+        .f1 { transform: rotateY(0deg) translateZ(50px); }
+        .f6 { transform: rotateY(180deg) translateZ(50px); }
+        .f3 { transform: rotateY(90deg) translateZ(50px); }
+        .f4 { transform: rotateY(-90deg) translateZ(50px); }
+        .f2 { transform: rotateX(90deg) translateZ(50px); }
+        .f5 { transform: rotateX(-90deg) translateZ(50px); }
+
+        .wallet { font-size: 22px; color: #2ecc71; margin-bottom: 20px; font-weight: bold; }
+        .inputs { background: #0f3460; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        .row { display: flex; justify-content: space-between; margin: 10px 0; align-items: center; }
+        input { width: 70px; padding: 8px; border-radius: 5px; border: none; text-align: center; font-weight: bold; }
+        
+        button { 
+            width: 100%; padding: 15px; background: #e94560; color: white; border: none; 
+            border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #status { margin-top: 15px; font-weight: bold; min-height: 40px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="wallet">VÍ: <span id="money">1000</span> 🪙</div>
+
+    <div class="scene">
+        <div class="dice" id="dice">
+            <div class="face f1">1</div>
+            <div class="face f6">6</div>
+            <div class="face f3">3</div>
+            <div class="face f4">4</div>
+            <div class="face f2">2</div>
+            <div class="face f5">5</div>
+        </div>
+    </div>
+
+    <div class="inputs">
+        <div class="row"><span>Đoán (1-6):</span> <input type="number" id="guess" value="1" min="1" max="6"></div>
+        <div class="row"><span>Cược xu:</span> <input type="number" id="bet" value="50" min="10"></div>
+    </div>
+
+    <button id="rollBtn" onclick="play()">LẮC XÚC XẮC</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    let balance = 1000;
+    const dice = document.getElementById('dice');
+    const status = document.getElementById('status');
+    const btn = document.getElementById('rollBtn');
+
+    function play() {
+        const guess = parseInt(document.getElementById('guess').value);
+        const bet = parseInt(document.getElementById('bet').value);
+
+        if (bet > balance || bet <= 0) { status.innerText = "Không đủ tiền!"; return; }
+        
+        btn.disabled = true;
+        status.innerText = "Đang lắc...";
+        status.style.color = "white";
+
+        // Bước 1: Reset xúc xắc về vị trí 0 để xoay chuẩn
+        dice.style.transition = 'none';
+        dice.style.transform = 'rotateX(0deg) rotateY(0deg)';
+        
+        // Dùng setTimeout nhỏ để trình duyệt kịp reset trước khi thực hiện xoay mạnh
+        setTimeout(() => {
+            const result = Math.floor(Math.random() * 6) + 1;
+            
+            // Bước 2: Thiết lập góc quay đích cho từng số
+            const rotations = {
+                1: { x: 720, y: 720 },    // Quay 2 vòng + mặt 1
+                2: { x: 630, y: 720 },    // Quay 2 vòng + mặt 2 (-90deg X)
+                3: { x: 720, y: 630 },    // Quay 2 vòng + mặt 3 (-90deg Y)
+                4: { x: 720, y: 810 },    // Quay 2 vòng + mặt 4 (90deg Y)
+                5: { x: 810, y: 720 },    // Quay 2 vòng + mặt 5 (90deg X)
+                6: { x: 720, y: 900 }     // Quay 2 vòng + mặt 6 (180deg Y)
+            };
+
+            const target = rotations[result];
+            dice.style.transition = 'transform 1.5s cubic-bezier(0.17, 0.67, 0.83, 0.67)';
+            dice.style.transform = `rotateX(${target.x}deg) rotateY(${target.y}deg)`;
+
+            // Bước 3: Tính tiền sau khi xoay xong
+            setTimeout(() => {
+                let msg = "";
+                if (guess === result) {
+                    const win = Math.floor(bet * 5.5);
+                    balance += win;
+                    msg = `THẮNG LỚN! Ra ${result}. +${win} xu`;
+                    status.style.color = "#2ecc71";
+                } else if (Math.abs(guess - result) === 1) {
+                    const refund = Math.floor(bet * 0.5);
+                    balance -= (bet - refund);
+                    msg = `SUÝT TRÚNG! Ra ${result}. Hoàn ${refund} xu`;
+                    status.style.color = "#f1c40f";
+                } else {
+                    balance -= bet;
+                    msg = `THUA! Kết quả là ${result}. -${bet} xu`;
+                    status.style.color = "#ff4d4d";
+                }
+
+                document.getElementById('money').innerText = balance;
+                status.innerText = msg;
+                btn.disabled = false;
+            }, 1550);
+        }, 50);
+    }
+</script>
+</body>
+</html>
